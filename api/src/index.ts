@@ -2,6 +2,7 @@ import { Hono } from "hono"
 import { cors } from "hono/cors"
 import { createAuth } from "./auth"
 import { itemsRoute } from "./routes/items"
+import { audioRoute } from "./routes/audio"
 import { getMigrations } from "better-auth/db/migration"
 
 type Bindings = {
@@ -78,6 +79,9 @@ app.post("/api/admin/seed", async (c) => {
 
 // Items CRUD (session-protected inside the route)
 app.route("/api/items", itemsRoute)
+
+// Audio upload + R2 serve (session-protected inside the route)
+app.route("/api/audio", audioRoute)
 
 app.get("/", (c) => c.text("walkie-talkie api"))
 

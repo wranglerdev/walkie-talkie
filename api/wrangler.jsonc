@@ -13,5 +13,11 @@
       "database_name": "walkie-talkie-db",
       "database_id": "de882c2b-7489-4c38-aaa3-687f73b348bc"
     }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "AUDIO_BUCKET",
+      "bucket_name": "walkie-talkie-audio"
+    }
   ]
 }

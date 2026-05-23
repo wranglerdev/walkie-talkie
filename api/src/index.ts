@@ -1,10 +1,12 @@
 import { Hono } from "hono"
 import { cors } from "hono/cors"
 import { createAuth } from "./auth"
+import { itemsRoute } from "./routes/items"
 import { getMigrations } from "better-auth/db/migration"
 
 type Bindings = {
   DB: D1Database
+  AUDIO_BUCKET: R2Bucket
   BETTER_AUTH_SECRET: string
   BETTER_AUTH_URL: string
   ADMIN_SECRET: string
@@ -74,7 +76,9 @@ app.post("/api/admin/seed", async (c) => {
   return c.json({ message: "User seeded", userId: result.user.id })
 })
 
-// Session-protected API routes will be added in next phases
+// Items CRUD (session-protected inside the route)
+app.route("/api/items", itemsRoute)
+
 app.get("/", (c) => c.text("walkie-talkie api"))
 
 export default app

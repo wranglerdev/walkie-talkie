@@ -1,0 +1,8 @@
+{
+  "name": "walkie-talkie",
+  "private": true,
+  "workspaces": [
+    "api",
+    "frontend"
+  ]
+}

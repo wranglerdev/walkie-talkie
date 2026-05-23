@@ -1,9 +1,14 @@
-import { Hono } from 'hono'
+import { Hono } from "hono"
+import { createDb } from "./db"
 
-const app = new Hono()
+type Bindings = {
+  DB: D1Database
+}
 
-app.get('/', (c) => {
-  return c.text('Hello Hono!')
+const app = new Hono<{ Bindings: Bindings }>()
+
+app.get("/", (c) => {
+  return c.text("walkie-talkie api")
 })
 
 export default app

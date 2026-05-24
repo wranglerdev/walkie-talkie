@@ -4,6 +4,8 @@ import { createAuth } from "./auth"
 import { itemsRoute } from "./routes/items"
 import { audioRoute } from "./routes/audio"
 import { getMigrations } from "better-auth/db/migration"
+import { createDb } from "./db"
+import { processAutoConfirm } from "./services/pending"
 
 type Bindings = {
   DB: D1Database
@@ -12,6 +14,7 @@ type Bindings = {
   BETTER_AUTH_URL: string
   ADMIN_SECRET: string
   USER_TIMEZONE: string
+  ITEM_QUEUE: Queue<{ itemId: string }>
 }
 
 type Variables = {
@@ -85,4 +88,13 @@ app.route("/api/audio", audioRoute)
 
 app.get("/", (c) => c.text("walkie-talkie api"))
 
-export default app
+export default {
+  fetch: app.fetch,
+  async queue(batch: MessageBatch<{ itemId: string }>, env: Bindings): Promise<void> {
+    const db = createDb(env.DB)
+    for (const message of batch.messages) {
+      await processAutoConfirm(db, message.body.itemId)
+      message.ack()
+    }
+  },
+}

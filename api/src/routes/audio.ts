@@ -15,6 +15,7 @@ type Bindings = {
   BETTER_AUTH_URL: string
   OPENROUTER_API_KEY: string
   USER_TIMEZONE: string
+  ITEM_QUEUE: Queue<{ itemId: string }>
 }
 
 type Variables = {
@@ -71,6 +72,9 @@ audioRoute.post("/upload", async (c) => {
   if (classification.tags) metadata.tags = classification.tags
   if (classification.confidence != null) metadata.confidence = classification.confidence
 
+  const confidence = classification.confidence ?? 0
+  const autoConfirm = confidence >= 0.8
+
   const newItem = {
     id,
     type: classification.category,
@@ -83,9 +87,14 @@ audioRoute.post("/upload", async (c) => {
     completed: classification.category === "reminder" || classification.category === "shopping" ? false : null,
     paid: classification.category === "bill" ? (classification.paid ?? false) : null,
     metadata: Object.keys(metadata).length > 0 ? metadata : null,
+    status: "pending" as const,
   }
 
   await db.insert(items).values(newItem)
+
+  if (autoConfirm) {
+    await c.env.ITEM_QUEUE.send({ itemId: id }, { delaySeconds: 5 })
+  }
 
   return c.json(newItem, 201)
 })

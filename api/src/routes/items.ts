@@ -1,5 +1,5 @@
 import { Hono } from "hono"
-import { eq } from "drizzle-orm"
+import { eq, and } from "drizzle-orm"
 import { createDb } from "../db"
 import { items } from "../db/schema"
 import { createAuth } from "../auth"
@@ -29,8 +29,8 @@ itemsRoute.get("/", async (c) => {
 
   const query = db.select().from(items)
   const rows = type
-    ? await query.where(eq(items.type, type as typeof items.$inferSelect.type))
-    : await query.orderBy(items.createdAt)
+    ? await query.where(and(eq(items.status, "confirmed"), eq(items.type, type as typeof items.$inferSelect.type)))
+    : await query.where(eq(items.status, "confirmed"))
 
   return c.json(rows.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()))
 })
@@ -40,6 +40,18 @@ itemsRoute.get("/:id", async (c) => {
   const row = await db.select().from(items).where(eq(items.id, c.req.param("id"))).get()
   if (!row) return c.json({ error: "Not found" }, 404)
   return c.json(row)
+})
+
+itemsRoute.post("/:id/confirm", async (c) => {
+  const db = createDb(c.env.DB)
+  const updated = await db
+    .update(items)
+    .set({ status: "confirmed", updatedAt: new Date() })
+    .where(eq(items.id, c.req.param("id")))
+    .returning()
+    .get()
+  if (!updated) return c.json({ error: "Not found" }, 404)
+  return c.json(updated)
 })
 
 itemsRoute.patch("/:id", async (c) => {

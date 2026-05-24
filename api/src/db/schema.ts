@@ -14,6 +14,7 @@ export const items = sqliteTable("items", {
   completed: integer("completed", { mode: "boolean" }),
   paid: integer("paid", { mode: "boolean" }),
   metadata: text("metadata", { mode: "json" }).$type<Record<string, unknown>>(),
+  status: text("status", { enum: ["pending", "confirmed"] }).notNull().default("confirmed"),
 })
 
 export type Item = typeof items.$inferSelect

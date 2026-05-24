@@ -22,5 +22,21 @@
   ],
   "ai": {
     "binding": "AI"
+  },
+  "queues": {
+    "producers": [
+      {
+        "queue": "item-auto-confirm",
+        "binding": "ITEM_QUEUE"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "item-auto-confirm",
+        "max_batch_size": 10,
+        "max_batch_timeout": 5,
+        "max_retries": 3
+      }
+    ]
   }
 }

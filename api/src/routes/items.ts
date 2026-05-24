@@ -25,19 +25,27 @@ itemsRoute.use("*", async (c, next) => {
 
 itemsRoute.get("/", async (c) => {
   const db = createDb(c.env.DB)
+  const userId = c.get("userId")
   const type = c.req.query("type")
 
-  const query = db.select().from(items)
+  const base = and(eq(items.status, "confirmed"), eq(items.userId, userId))
   const rows = type
-    ? await query.where(and(eq(items.status, "confirmed"), eq(items.type, type as typeof items.$inferSelect.type)))
-    : await query.where(eq(items.status, "confirmed"))
+    ? await db
+        .select()
+        .from(items)
+        .where(and(base, eq(items.type, type as typeof items.$inferSelect.type)))
+    : await db.select().from(items).where(base)
 
   return c.json(rows.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()))
 })
 
 itemsRoute.get("/:id", async (c) => {
   const db = createDb(c.env.DB)
-  const row = await db.select().from(items).where(eq(items.id, c.req.param("id"))).get()
+  const row = await db
+    .select()
+    .from(items)
+    .where(and(eq(items.id, c.req.param("id")), eq(items.userId, c.get("userId"))))
+    .get()
   if (!row) return c.json({ error: "Not found" }, 404)
   return c.json(row)
 })
@@ -47,7 +55,7 @@ itemsRoute.post("/:id/confirm", async (c) => {
   const updated = await db
     .update(items)
     .set({ status: "confirmed", updatedAt: new Date() })
-    .where(eq(items.id, c.req.param("id")))
+    .where(and(eq(items.id, c.req.param("id")), eq(items.userId, c.get("userId"))))
     .returning()
     .get()
   if (!updated) return c.json({ error: "Not found" }, 404)
@@ -56,12 +64,25 @@ itemsRoute.post("/:id/confirm", async (c) => {
 
 itemsRoute.patch("/:id", async (c) => {
   const db = createDb(c.env.DB)
-  const body = await c.req.json<Partial<typeof items.$inferInsert>>()
-  const now = new Date()
+  const body = await c.req.json<Record<string, unknown>>()
+
+  // Whitelist of user-editable fields — prevents injection of userId, type, etc.
+  const patch: Partial<typeof items.$inferInsert> = {}
+  if (typeof body.title === "string") patch.title = body.title
+  if (body.completed !== undefined) patch.completed = body.completed as boolean | null
+  if (body.paid !== undefined) patch.paid = body.paid as boolean | null
+  if (body.dueDate !== undefined) {
+    patch.dueDate = body.dueDate ? new Date(body.dueDate as string) : null
+  }
+
+  if (Object.keys(patch).length === 0) {
+    return c.json({ error: "Nenhum campo válido para atualizar" }, 400)
+  }
+
   const updated = await db
     .update(items)
-    .set({ ...body, updatedAt: now })
-    .where(eq(items.id, c.req.param("id")))
+    .set({ ...patch, updatedAt: new Date() })
+    .where(and(eq(items.id, c.req.param("id")), eq(items.userId, c.get("userId"))))
     .returning()
     .get()
   if (!updated) return c.json({ error: "Not found" }, 404)
@@ -70,16 +91,21 @@ itemsRoute.patch("/:id", async (c) => {
 
 itemsRoute.delete("/:id", async (c) => {
   const db = createDb(c.env.DB)
-  const item = await db.select().from(items).where(eq(items.id, c.req.param("id"))).get()
+  const item = await db
+    .select()
+    .from(items)
+    .where(and(eq(items.id, c.req.param("id")), eq(items.userId, c.get("userId"))))
+    .get()
   if (!item) return c.json({ error: "Not found" }, 404)
 
-  // Delete audio from R2 if exists
   if (item.audioUrl) {
-    const key = item.audioUrl.split("/").pop()
+    const key = item.audioUrl.replace("/api/audio/", "")
     if (key) await c.env.AUDIO_BUCKET.delete(key)
   }
 
-  await db.delete(items).where(eq(items.id, c.req.param("id")))
+  await db
+    .delete(items)
+    .where(and(eq(items.id, c.req.param("id")), eq(items.userId, c.get("userId"))))
   return c.json({ success: true })
 })
 

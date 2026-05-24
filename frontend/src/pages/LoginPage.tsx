@@ -1,26 +1,40 @@
-import { useState, type FormEvent } from "react"
+import { useState } from "react"
 import { useNavigate } from "@tanstack/react-router"
+import { useForm, type AnyFieldApi } from "@tanstack/react-form"
+import { loginSchema } from "@walkie-talkie/shared"
 import { signIn } from "../lib/auth-client"
+
+function FieldErrors({ field }: { field: AnyFieldApi }) {
+  if (!field.state.meta.isTouched || field.state.meta.errors.length === 0) return null
+  return (
+    <span className="text-error text-sm mt-1">
+      {field.state.meta.errors
+        .map((e) =>
+          typeof e === "string" ? e : e && typeof e === "object" && "message" in e ? String((e as { message: string }).message) : String(e),
+        )
+        .filter(Boolean)
+        .join(", ")}
+    </span>
+  )
+}
 
 export default function LoginPage() {
   const navigate = useNavigate()
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [error, setError] = useState("")
-  const [loading, setLoading] = useState(false)
+  const [serverError, setServerError] = useState("")
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault()
-    setError("")
-    setLoading(true)
-    const result = await signIn.email({ email, password })
-    setLoading(false)
-    if (result.error) {
-      setError(result.error.message ?? "Falha ao entrar")
-    } else {
-      navigate({ to: "/" })
-    }
-  }
+  const form = useForm({
+    defaultValues: { email: "", password: "" },
+    validators: { onChange: loginSchema },
+    onSubmit: async ({ value }) => {
+      setServerError("")
+      const result = await signIn.email(value)
+      if (result.error) {
+        setServerError(result.error.message ?? "Falha ao entrar")
+      } else {
+        navigate({ to: "/" })
+      }
+    },
+  })
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-base-200 px-4">
@@ -28,48 +42,69 @@ export default function LoginPage() {
         <div className="card-body">
           <h1 className="card-title text-2xl justify-center mb-2">walkie-talkie</h1>
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text">Email</span>
-              </label>
-              <input
-                type="email"
-                className="input input-bordered w-full"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoComplete="email"
-              />
-            </div>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              form.handleSubmit()
+            }}
+            className="flex flex-col gap-4"
+          >
+            <form.Field name="email">
+              {(field) => (
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text">Email</span>
+                  </label>
+                  <input
+                    type="email"
+                    className="input input-bordered w-full"
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    autoComplete="email"
+                  />
+                  <FieldErrors field={field} />
+                </div>
+              )}
+            </form.Field>
 
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text">Senha</span>
-              </label>
-              <input
-                type="password"
-                className="input input-bordered w-full"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                autoComplete="current-password"
-              />
-            </div>
+            <form.Field name="password">
+              {(field) => (
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text">Senha</span>
+                  </label>
+                  <input
+                    type="password"
+                    className="input input-bordered w-full"
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    autoComplete="current-password"
+                  />
+                  <FieldErrors field={field} />
+                </div>
+              )}
+            </form.Field>
 
-            {error && (
+            {serverError && (
               <div className="alert alert-error text-sm py-2">
-                <span>{error}</span>
+                <span>{serverError}</span>
               </div>
             )}
 
-            <button
-              type="submit"
-              className="btn btn-primary btn-block"
-              disabled={loading}
-            >
-              {loading ? <span className="loading loading-spinner loading-sm" /> : "Entrar"}
-            </button>
+            <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting] as [boolean, boolean]}>
+              {([canSubmit, isSubmitting]: [boolean, boolean]) => (
+                <button
+                  type="submit"
+                  className="btn btn-primary btn-block"
+                  disabled={!canSubmit}
+                >
+                  {isSubmitting ? <span className="loading loading-spinner loading-sm" /> : "Entrar"}
+                </button>
+              )}
+            </form.Subscribe>
           </form>
         </div>
       </div>

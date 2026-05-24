@@ -10,13 +10,16 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tanstack/react-form": "^1.11.0",
     "@tailwindcss/vite": "^4.3.0",
     "@tanstack/react-router": "^1.170.8",
+    "@walkie-talkie/shared": "*",
     "better-auth": "^1.6.11",
     "daisyui": "^5.5.20",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "tailwindcss": "^4.3.0"
+    "tailwindcss": "^4.3.0",
+    "zod": "^3.25.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

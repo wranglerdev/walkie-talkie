@@ -14,14 +14,14 @@ const HistoryIcon = () => (
 
 export default function BottomNav() {
   return (
-    <div className="btm-nav btm-nav-sm">
-      <Link to="/" activeProps={{ className: "active" }} activeOptions={{ exact: true }}>
+    <div className="dock dock-sm">
+      <Link to="/" activeProps={{ className: "dock-active" }} activeOptions={{ exact: true }}>
         <HomeIcon />
-        <span className="btm-nav-label">Home</span>
+        <span className="dock-label">Home</span>
       </Link>
-      <Link to="/history" activeProps={{ className: "active" }}>
+      <Link to="/history" activeProps={{ className: "dock-active" }}>
         <HistoryIcon />
-        <span className="btm-nav-label">Histórico</span>
+        <span className="dock-label">Histórico</span>
       </Link>
     </div>
   )

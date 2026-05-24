@@ -10,8 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@tanstack/react-form": "^1.11.0",
     "@tailwindcss/vite": "^4.3.0",
+    "@tanstack/react-form": "^1.11.0",
+    "@tanstack/react-query": "^5.100.14",
     "@tanstack/react-router": "^1.170.8",
     "@walkie-talkie/shared": "*",
     "better-auth": "^1.6.11",

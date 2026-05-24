@@ -24,7 +24,7 @@ export default function LoginPage() {
 
   const form = useForm({
     defaultValues: { email: "", password: "" },
-    validators: { onChange: loginSchema },
+    validators: { onSubmit: loginSchema },
     onSubmit: async ({ value }) => {
       setServerError("")
       const result = await signIn.email(value)

@@ -6,6 +6,7 @@ import { items } from "../db/schema"
 import { processAutoConfirm } from "../services/pending"
 
 const BASE_ITEM = {
+  userId: "user-1",
   type: "note" as const,
   title: "Test",
   transcript: "Test transcript",
@@ -19,7 +20,7 @@ describe("processAutoConfirm", () => {
 
   beforeAll(async () => {
     await env.DB.prepare(
-      "CREATE TABLE IF NOT EXISTS `items` (`id` text PRIMARY KEY NOT NULL, `type` text NOT NULL, `title` text NOT NULL, `transcript` text NOT NULL, `audio_url` text, `created_at` integer NOT NULL, `updated_at` integer NOT NULL, `due_date` integer, `completed` integer, `paid` integer, `metadata` text, `status` text NOT NULL DEFAULT 'confirmed')"
+      "CREATE TABLE IF NOT EXISTS `items` (`id` text PRIMARY KEY NOT NULL, `type` text NOT NULL, `title` text NOT NULL, `transcript` text NOT NULL, `audio_url` text, `created_at` integer NOT NULL, `updated_at` integer NOT NULL, `due_date` integer, `completed` integer, `paid` integer, `metadata` text, `status` text NOT NULL DEFAULT 'confirmed', `user_id` text NOT NULL DEFAULT '')"
     ).run()
   })
 

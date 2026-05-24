@@ -1,4 +1,4 @@
-CREATE TABLE `items` (
+CREATE TABLE IF NOT EXISTS `items` (
 	`id` text PRIMARY KEY NOT NULL,
 	`type` text NOT NULL,
 	`title` text NOT NULL,

@@ -1,4 +1,3 @@
-import OpenAI from "openai"
 import type { ItemType } from "../db/schema"
 
 export type ClassificationResult = {
@@ -28,27 +27,30 @@ export async function classifyTranscript(
   transcript: string,
   now: Date,
   timezone: string,
-  apiKey: string,
+  ai: Ai,
 ): Promise<ClassificationResult> {
-  const client = new OpenAI({
-    baseURL: "https://openrouter.ai/api/v1",
-    apiKey,
-  })
-
   const userPrompt = `Data/hora atual: ${now.toISOString()} (timezone: ${timezone})\n\nTranscript: "${transcript}"`
 
-  const response = await client.chat.completions.create({
-    model: "x-ai/grok-3-mini",
+  const response = await ai.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
     messages: [
       { role: "system", content: SYSTEM_PROMPT },
       { role: "user", content: userPrompt },
     ],
     response_format: { type: "json_object" },
     temperature: 0,
-  })
+  } as Parameters<Ai["run"]>[1])
 
-  const content = response.choices[0]?.message?.content ?? "{}"
-  const parsed = JSON.parse(content) as ClassificationResult
+  const content =
+    typeof response === "object" && "response" in response
+      ? (response.response as string)
+      : ""
+
+  let parsed: Partial<ClassificationResult> = {}
+  try {
+    parsed = JSON.parse(content) as Partial<ClassificationResult>
+  } catch {
+    // fallback to defaults below
+  }
 
   return {
     category: parsed.category ?? "note",

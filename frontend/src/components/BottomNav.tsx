@@ -1,9 +1,4 @@
-type Tab = "home" | "history"
-
-type Props = {
-  active: Tab
-  onChange: (tab: Tab) => void
-}
+import { Link } from "@tanstack/react-router"
 
 const HomeIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" className="w-5 h-5">
@@ -17,23 +12,17 @@ const HistoryIcon = () => (
   </svg>
 )
 
-export default function BottomNav({ active, onChange }: Props) {
+export default function BottomNav() {
   return (
     <div className="btm-nav btm-nav-sm">
-      <button
-        className={active === "home" ? "active" : ""}
-        onClick={() => onChange("home")}
-      >
+      <Link to="/" activeProps={{ className: "active" }} activeOptions={{ exact: true }}>
         <HomeIcon />
         <span className="btm-nav-label">Home</span>
-      </button>
-      <button
-        className={active === "history" ? "active" : ""}
-        onClick={() => onChange("history")}
-      >
+      </Link>
+      <Link to="/history" activeProps={{ className: "active" }}>
         <HistoryIcon />
         <span className="btm-nav-label">Histórico</span>
-      </button>
+      </Link>
     </div>
   )
 }

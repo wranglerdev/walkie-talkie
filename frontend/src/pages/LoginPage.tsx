@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from "react"
+import { useNavigate } from "@tanstack/react-router"
 import { signIn } from "../lib/auth-client"
 
 export default function LoginPage() {
+  const navigate = useNavigate()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
@@ -15,6 +17,8 @@ export default function LoginPage() {
     setLoading(false)
     if (result.error) {
       setError(result.error.message ?? "Falha ao entrar")
+    } else {
+      navigate({ to: "/" })
     }
   }
 

@@ -10,6 +10,7 @@ import { classifyTranscript } from "../services/classifier"
 type Bindings = {
   DB: D1Database
   AUDIO_BUCKET: R2Bucket
+  AI: Ai
   BETTER_AUTH_SECRET: string
   BETTER_AUTH_URL: string
   OPENROUTER_API_KEY: string
@@ -31,6 +32,7 @@ audioRoute.post("/upload", async (c) => {
   const formData = await c.req.formData()
   const audioFile = formData.get("audio") as File | null
   const duration = Number(formData.get("duration") ?? 0)
+  const clientNowRaw = formData.get("clientNow") as string | null
 
   if (!audioFile) {
     return c.json({ error: "No audio file provided" }, 400)
@@ -48,15 +50,15 @@ audioRoute.post("/upload", async (c) => {
 
   // Transcribe
   const blob = new Blob([audioBlob], { type: "audio/webm" })
-  const transcript = await transcribeAudio(blob, c.env.OPENROUTER_API_KEY)
+  const transcript = await transcribeAudio(blob, c.env.AI)
 
   // Classify
-  const now = new Date()
+  const now = clientNowRaw ? new Date(clientNowRaw) : new Date()
   const classification = await classifyTranscript(
     transcript,
     now,
     c.env.USER_TIMEZONE,
-    c.env.OPENROUTER_API_KEY,
+    c.env.AI,
   )
 
   // Save to D1

@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router"
 import type { Item, ItemType } from "../api/client"
 import { api } from "../api/client"
 
@@ -77,6 +78,13 @@ export default function ItemCard({ item, compact = false, onUpdate }: Props) {
                 {item.paid ? "✓ pago" : "marcar pago"}
               </button>
             )}
+            <Link
+              to="/logs/$id"
+              params={{ id: item.id }}
+              className="btn btn-xs btn-ghost ml-auto opacity-40 hover:opacity-100"
+            >
+              ver log →
+            </Link>
           </div>
         )}
       </div>

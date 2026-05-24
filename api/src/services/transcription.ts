@@ -1,22 +1,8 @@
-import OpenAI from "openai"
+export async function transcribeAudio(audioBlob: Blob, ai: Ai): Promise<string> {
+  const buffer = await audioBlob.arrayBuffer()
+  const audio = [...new Uint8Array(buffer)]
 
-export async function transcribeAudio(
-  audioBlob: Blob,
-  apiKey: string,
-): Promise<string> {
-  const client = new OpenAI({
-    baseURL: "https://openrouter.ai/api/v1",
-    apiKey,
-  })
+  const result = await ai.run("@cf/openai/whisper", { audio })
 
-  const file = new File([audioBlob], "audio.webm", { type: "audio/webm" })
-
-  const transcription = await client.audio.transcriptions.create({
-    model: "x-ai/grok-2-vision-1212",
-    file,
-    language: "pt",
-    response_format: "text",
-  })
-
-  return typeof transcription === "string" ? transcription : transcription.text
+  return result.text ?? ""
 }

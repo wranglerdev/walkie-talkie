@@ -1,16 +1,18 @@
-import { useCallback } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRecorder } from "../hooks/useRecorder"
 import { api, type Item } from "../api/client"
 import MicButton from "../components/MicButton"
 import ItemCard from "../components/ItemCard"
 
-type Props = {
-  lastItem: Item | null
-  onNewItem: (item: Item) => void
-}
-
-export default function HomePage({ lastItem, onNewItem }: Props) {
+export default function HomePage() {
   const { state, error, startRecording, stopRecording, setProcessing, setIdle } = useRecorder()
+  const [lastItem, setLastItem] = useState<Item | null>(null)
+
+  useEffect(() => {
+    api.items.list().then((items) => {
+      if (items.length > 0) setLastItem(items[0])
+    })
+  }, [])
 
   const handlePointerDown = useCallback(async () => {
     await startRecording()
@@ -22,13 +24,13 @@ export default function HomePage({ lastItem, onNewItem }: Props) {
     setProcessing()
     try {
       const item = await api.audio.upload(result.blob, result.duration)
-      onNewItem(item)
+      setLastItem(item)
     } catch (err) {
       console.error("Upload failed", err)
     } finally {
       setIdle()
     }
-  }, [stopRecording, setProcessing, setIdle, onNewItem])
+  }, [stopRecording, setProcessing, setIdle])
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-8 px-4 pb-20">

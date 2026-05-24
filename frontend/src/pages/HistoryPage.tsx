@@ -10,11 +10,7 @@ const FILTERS: { label: string; value: ItemType | "all" }[] = [
   { label: "Ideia", value: "idea" },
 ]
 
-type Props = {
-  onItemUpdate?: (item: Item) => void
-}
-
-export default function HistoryPage({ onItemUpdate }: Props) {
+export default function HistoryPage() {
   const [items, setItems] = useState<Item[]>([])
   const [filter, setFilter] = useState<ItemType | "all">("all")
   const [loading, setLoading] = useState(true)
@@ -28,13 +24,9 @@ export default function HistoryPage({ onItemUpdate }: Props) {
     })
   }, [filter])
 
-  const handleUpdate = useCallback(
-    (updated: Item) => {
-      setItems((prev) => prev.map((i) => (i.id === updated.id ? updated : i)))
-      onItemUpdate?.(updated)
-    },
-    [onItemUpdate],
-  )
+  const handleUpdate = useCallback((updated: Item) => {
+    setItems((prev) => prev.map((i) => (i.id === updated.id ? updated : i)))
+  }, [])
 
   return (
     <div className="flex-1 flex flex-col pb-20 px-4">

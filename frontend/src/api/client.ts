@@ -49,6 +49,7 @@ export const api = {
       const form = new FormData()
       form.append("audio", blob, "audio.webm")
       form.append("duration", String(duration))
+      form.append("clientNow", new Date().toISOString())
       const res = await fetch("/api/audio/upload", {
         method: "POST",
         credentials: "include",

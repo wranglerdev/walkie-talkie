@@ -21,11 +21,19 @@ npm install
 
 Crie `api/.dev.vars` para desenvolvimento local:
 
-```
+```env
 BETTER_AUTH_SECRET=seu-secret-min-32-chars
 BETTER_AUTH_URL=http://localhost:5173
 ADMIN_SECRET=seu-admin-secret
 OPENROUTER_API_KEY=sua-chave-openrouter
+```
+
+```bash
+# BETTER_AUTH_SECRET (32 bytes = 64 hex chars)
+ openssl rand -hex 32
+
+# ADMIN_SECRET
+openssl rand -hex 16
 ```
 
 Em produção, configure via `wrangler secret put`:

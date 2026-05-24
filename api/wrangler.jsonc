@@ -19,5 +19,8 @@
       "binding": "AUDIO_BUCKET",
       "bucket_name": "walkie-talkie-audio"
     }
-  ]
+  ],
+  "ai": {
+    "binding": "AI"
+  }
 }

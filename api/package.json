@@ -4,9 +4,10 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy --minify",
+    "test": "vitest run",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
-    "db:migrate:local": "wrangler d1 execute walkie-talkie-db --local --file ./drizzle/0000_unique_slyde.sql",
-    "db:migrate:remote": "wrangler d1 execute walkie-talkie-db --remote --file ./drizzle/0000_unique_slyde.sql",
+    "db:migrate:local": "wrangler d1 execute walkie-talkie-db --local --file ./drizzle/0000_unique_slyde.sql && wrangler d1 execute walkie-talkie-db --local --file ./drizzle/0001_add_item_status.sql",
+    "db:migrate:remote": "wrangler d1 execute walkie-talkie-db --remote --file ./drizzle/0000_unique_slyde.sql && wrangler d1 execute walkie-talkie-db --remote --file ./drizzle/0001_add_item_status.sql",
     "auth:migrate:local": "curl -s -X POST http://localhost:8787/api/admin/migrate -H \"x-admin-secret: $ADMIN_SECRET\" | npx json",
     "auth:migrate:remote": "curl -s -X POST $BETTER_AUTH_URL/api/admin/migrate -H \"x-admin-secret: $ADMIN_SECRET\" | npx json",
     "seed:local": "curl -s -X POST http://localhost:8787/api/admin/seed -H \"x-admin-secret: $ADMIN_SECRET\" -H \"Content-Type: application/json\" -d '{\"email\":\"$SEED_EMAIL\",\"password\":\"$SEED_PASSWORD\",\"name\":\"$SEED_NAME\"}' | npx json",
@@ -20,8 +21,10 @@
     "openai": "^6.39.0"
   },
   "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.16.9",
     "@cloudflare/workers-types": "^4.20260523.1",
     "drizzle-kit": "^0.31.10",
+    "vitest": "^4.1.7",
     "wrangler": "^4.4.0"
   }
 }

@@ -1,10 +1,24 @@
+import { useSession } from "./lib/auth-client"
+import LoginPage from "./pages/LoginPage"
+
 export default function App() {
+  const { data: session, isPending } = useSession()
+
+  if (isPending) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-base-100">
+        <span className="loading loading-ring loading-lg text-primary" />
+      </div>
+    )
+  }
+
+  if (!session) {
+    return <LoginPage />
+  }
+
   return (
     <div className="min-h-screen bg-base-100 flex items-center justify-center">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold text-primary mb-4">walkie-talkie</h1>
-        <div className="badge badge-secondary">daisyUI v5 + Tailwind v4</div>
-      </div>
+      <p className="text-base-content">Bem-vindo, {session.user.name}!</p>
     </div>
   )
 }

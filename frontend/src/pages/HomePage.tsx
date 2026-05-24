@@ -3,9 +3,11 @@ import { useRecorder } from "../hooks/useRecorder"
 import { api, type Item } from "../api/client"
 import MicButton from "../components/MicButton"
 import ItemCard from "../components/ItemCard"
+import PendingReview from "../components/PendingReview"
 
 export default function HomePage() {
   const { state, error, startRecording, stopRecording, setProcessing, setIdle } = useRecorder()
+  const [pendingItem, setPendingItem] = useState<Item | null>(null)
   const [lastItem, setLastItem] = useState<Item | null>(null)
 
   useEffect(() => {
@@ -24,13 +26,22 @@ export default function HomePage() {
     setProcessing()
     try {
       const item = await api.audio.upload(result.blob, result.duration)
-      setLastItem(item)
+      setPendingItem(item)
     } catch (err) {
       console.error("Upload failed", err)
     } finally {
       setIdle()
     }
   }, [stopRecording, setProcessing, setIdle])
+
+  function handleConfirmed(item: Item) {
+    setPendingItem(null)
+    setLastItem(item)
+  }
+
+  function handleDiscarded() {
+    setPendingItem(null)
+  }
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-8 px-4 pb-20">
@@ -50,7 +61,15 @@ export default function HomePage() {
         onPointerUp={handlePointerUp}
       />
 
-      {lastItem && (
+      {pendingItem && (
+        <PendingReview
+          item={pendingItem}
+          onConfirmed={handleConfirmed}
+          onDiscarded={handleDiscarded}
+        />
+      )}
+
+      {!pendingItem && lastItem && (
         <div className="w-full max-w-sm">
           <p className="text-xs text-base-content/40 mb-2 text-center uppercase tracking-wider">
             Último salvo
@@ -59,7 +78,7 @@ export default function HomePage() {
         </div>
       )}
 
-      {!lastItem && state === "idle" && (
+      {!pendingItem && !lastItem && state === "idle" && (
         <p className="text-base-content/30 text-sm text-center max-w-xs">
           Grave um lembrete, nota, conta ou ideia. A IA organiza automaticamente.
         </p>

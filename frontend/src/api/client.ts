@@ -12,6 +12,7 @@ export type Item = {
   completed: boolean | null
   paid: boolean | null
   metadata: Record<string, unknown> | null
+  status: "pending" | "confirmed"
 }
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
@@ -42,6 +43,9 @@ export const api = {
 
     delete: (id: string) =>
       apiFetch<{ success: boolean }>(`/items/${id}`, { method: "DELETE" }),
+
+    confirm: (id: string) =>
+      apiFetch<Item>(`/items/${id}/confirm`, { method: "POST" }),
   },
 
   audio: {

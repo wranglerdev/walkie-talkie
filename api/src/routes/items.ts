@@ -4,6 +4,7 @@ import { createDb } from "../db"
 import { items } from "../db/schema"
 import { createAuth } from "../auth"
 import { sessionMiddleware } from "../middleware/session"
+import { itemPatchSchema } from "@walkie-talkie/shared"
 
 type Bindings = {
   DB: D1Database
@@ -64,20 +65,18 @@ itemsRoute.post("/:id/confirm", async (c) => {
 
 itemsRoute.patch("/:id", async (c) => {
   const db = createDb(c.env.DB)
-  const body = await c.req.json<Record<string, unknown>>()
+  const raw = await c.req.json()
+  const parsed = itemPatchSchema.safeParse(raw)
+  if (!parsed.success) {
+    return c.json({ error: parsed.error.errors[0].message }, 400)
+  }
 
-  // Whitelist of user-editable fields — prevents injection of userId, type, etc.
+  const { title, completed, paid, dueDate } = parsed.data
   const patch: Partial<typeof items.$inferInsert> = {}
-  if (typeof body.title === "string") patch.title = body.title
-  if (body.completed !== undefined) patch.completed = body.completed as boolean | null
-  if (body.paid !== undefined) patch.paid = body.paid as boolean | null
-  if (body.dueDate !== undefined) {
-    patch.dueDate = body.dueDate ? new Date(body.dueDate as string) : null
-  }
-
-  if (Object.keys(patch).length === 0) {
-    return c.json({ error: "Nenhum campo válido para atualizar" }, 400)
-  }
+  if (title !== undefined) patch.title = title
+  if (completed !== undefined) patch.completed = completed
+  if (paid !== undefined) patch.paid = paid
+  if (dueDate !== undefined) patch.dueDate = dueDate ? new Date(dueDate) : null
 
   const updated = await db
     .update(items)

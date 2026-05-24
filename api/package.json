@@ -15,10 +15,12 @@
   },
   "dependencies": {
     "@paralleldrive/cuid2": "^3.3.0",
+    "@walkie-talkie/shared": "*",
     "better-auth": "^1.6.11",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.12.21",
-    "openai": "^6.39.0"
+    "openai": "^6.39.0",
+    "zod": "^3.25.0"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.16.9",

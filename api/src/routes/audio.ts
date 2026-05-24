@@ -22,6 +22,35 @@ type Variables = {
   userId: string
 }
 
+const MAX_AUDIO_SIZE = 25 * 1024 * 1024 // 25 MB
+// WebM files begin with EBML header 0x1A 0x45 0xDF 0xA3
+const WEBM_MAGIC = [0x1a, 0x45, 0xdf, 0xa3]
+
+export async function validateAudioFile(
+  file: Pick<File, "size" | "type"> & { slice(start: number, end: number): Blob },
+): Promise<{ valid: true } | { valid: false; error: string; status: 413 | 415 }> {
+  if (file.size > MAX_AUDIO_SIZE) {
+    return { valid: false, error: "Arquivo muito grande (máx 25 MB)", status: 413 }
+  }
+
+  const baseType = file.type.split(";")[0].trim()
+  if (!baseType.startsWith("audio/")) {
+    return { valid: false, error: "Tipo de arquivo inválido — deve ser áudio", status: 415 }
+  }
+
+  // Verify magic bytes for webm (the only format the recorder produces)
+  if (baseType === "audio/webm") {
+    const header = await file.slice(0, 4).arrayBuffer()
+    const bytes = new Uint8Array(header)
+    const valid = WEBM_MAGIC.every((b, i) => bytes[i] === b)
+    if (!valid) {
+      return { valid: false, error: "Conteúdo do arquivo inválido", status: 415 }
+    }
+  }
+
+  return { valid: true }
+}
+
 const audioRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
 audioRoute.use("*", async (c, next) => {
@@ -36,10 +65,16 @@ audioRoute.post("/upload", async (c) => {
   const clientNowRaw = formData.get("clientNow") as string | null
 
   if (!audioFile) {
-    return c.json({ error: "No audio file provided" }, 400)
+    return c.json({ error: "Nenhum arquivo de áudio fornecido" }, 400)
   }
 
-  const audioKey = `${createId()}.webm`
+  const validation = await validateAudioFile(audioFile)
+  if (!validation.valid) {
+    return c.json({ error: validation.error }, validation.status)
+  }
+
+  const userId = c.get("userId")
+  const audioKey = `${userId}/${createId()}.webm`
   const audioBlob = await audioFile.arrayBuffer()
 
   // Save to R2
@@ -77,6 +112,7 @@ audioRoute.post("/upload", async (c) => {
 
   const newItem = {
     id,
+    userId,
     type: classification.category,
     title: classification.title,
     transcript,
@@ -99,9 +135,14 @@ audioRoute.post("/upload", async (c) => {
   return c.json(newItem, 201)
 })
 
-// Serve audio from R2
-audioRoute.get("/:key", async (c) => {
-  const object = await c.env.AUDIO_BUCKET.get(c.req.param("key"))
+// Serve audio from R2 — path includes userId so ownership is implicit in the session check
+audioRoute.get("/:userId/:key", async (c) => {
+  if (c.req.param("userId") !== c.get("userId")) {
+    return c.json({ error: "Forbidden" }, 403)
+  }
+
+  const audioKey = `${c.req.param("userId")}/${c.req.param("key")}`
+  const object = await c.env.AUDIO_BUCKET.get(audioKey)
   if (!object) return c.json({ error: "Not found" }, 404)
 
   return new Response(object.body, {

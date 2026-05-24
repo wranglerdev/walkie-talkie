@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import type { Item, ItemType } from "../api/client"
-import { api } from "../api/client"
+import { useConfirmItem, useDeleteItem } from "../hooks/items"
 
 const BADGE_COLOR: Record<ItemType, string> = {
   reminder: "badge-primary",
@@ -24,7 +24,7 @@ const COUNTDOWN_SECONDS = 5
 
 type Props = {
   item: Item
-  onConfirmed: (item: Item) => void
+  onConfirmed: () => void
   onDiscarded: () => void
 }
 
@@ -35,6 +35,9 @@ export default function PendingReview({ item, onConfirmed, onDiscarded }: Props)
   const [secondsLeft, setSecondsLeft] = useState(COUNTDOWN_SECONDS)
   const discardedRef = useRef(false)
 
+  const confirmItem = useConfirmItem()
+  const deleteItem = useDeleteItem()
+
   useEffect(() => {
     if (!isHighConfidence) return
 
@@ -43,7 +46,7 @@ export default function PendingReview({ item, onConfirmed, onDiscarded }: Props)
         if (s <= 1) {
           clearInterval(interval)
           if (!discardedRef.current) {
-            onConfirmed({ ...item, status: "confirmed" })
+            onConfirmed()
           }
           return 0
         }
@@ -52,21 +55,21 @@ export default function PendingReview({ item, onConfirmed, onDiscarded }: Props)
     }, 1000)
 
     return () => clearInterval(interval)
-  }, [isHighConfidence, item, onConfirmed])
+  }, [isHighConfidence, onConfirmed])
 
   async function handleConfirm() {
     try {
-      const confirmed = await api.items.confirm(item.id)
-      onConfirmed(confirmed)
+      await confirmItem.mutateAsync(item.id)
+      onConfirmed()
     } catch {
-      onConfirmed({ ...item, status: "confirmed" })
+      onConfirmed()
     }
   }
 
   async function handleDiscard() {
     discardedRef.current = true
     try {
-      await api.items.delete(item.id)
+      await deleteItem.mutateAsync(item.id)
     } finally {
       onDiscarded()
     }

@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from "react"
-import { api, type Item, type ItemType } from "../api/client"
+import { useState } from "react"
+import { useItems } from "../hooks/items"
+import type { ItemType } from "../api/client"
 import ItemCard from "../components/ItemCard"
 
 const FILTERS: { label: string; value: ItemType | "all" }[] = [
@@ -11,22 +12,8 @@ const FILTERS: { label: string; value: ItemType | "all" }[] = [
 ]
 
 export default function HistoryPage() {
-  const [items, setItems] = useState<Item[]>([])
   const [filter, setFilter] = useState<ItemType | "all">("all")
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    setLoading(true)
-    const type = filter === "all" ? undefined : filter
-    api.items.list(type).then((data) => {
-      setItems(data)
-      setLoading(false)
-    })
-  }, [filter])
-
-  const handleUpdate = useCallback((updated: Item) => {
-    setItems((prev) => prev.map((i) => (i.id === updated.id ? updated : i)))
-  }, [])
+  const { data: items = [], isLoading } = useItems(filter === "all" ? undefined : filter)
 
   return (
     <div className="flex-1 flex flex-col pb-20 px-4">
@@ -45,22 +32,22 @@ export default function HistoryPage() {
       </div>
 
       <div className="flex flex-col gap-3 mt-4">
-        {loading && (
+        {isLoading && (
           <div className="flex justify-center py-8">
             <span className="loading loading-spinner loading-md text-primary" />
           </div>
         )}
 
-        {!loading && items.length === 0 && (
+        {!isLoading && items.length === 0 && (
           <div className="text-center text-base-content/40 py-12">
             <p>Nenhum item encontrado.</p>
             <p className="text-sm mt-1">Grave algo na tela inicial!</p>
           </div>
         )}
 
-        {!loading &&
+        {!isLoading &&
           items.map((item) => (
-            <ItemCard key={item.id} item={item} onUpdate={handleUpdate} />
+            <ItemCard key={item.id} item={item} />
           ))}
       </div>
     </div>

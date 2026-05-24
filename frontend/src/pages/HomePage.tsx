@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from "react"
+import { useState, useCallback } from "react"
 import { useRecorder } from "../hooks/useRecorder"
-import { api, type Item } from "../api/client"
+import { useItems, useUploadAudio } from "../hooks/items"
+import type { Item } from "../api/client"
 import MicButton from "../components/MicButton"
 import ItemCard from "../components/ItemCard"
 import PendingReview from "../components/PendingReview"
@@ -8,13 +9,11 @@ import PendingReview from "../components/PendingReview"
 export default function HomePage() {
   const { state, error, startRecording, stopRecording, setProcessing, setIdle } = useRecorder()
   const [pendingItem, setPendingItem] = useState<Item | null>(null)
-  const [lastItem, setLastItem] = useState<Item | null>(null)
 
-  useEffect(() => {
-    api.items.list().then((items) => {
-      if (items.length > 0) setLastItem(items[0])
-    })
-  }, [])
+  const { data: items } = useItems()
+  const lastItem = pendingItem ? null : (items?.[0] ?? null)
+
+  const uploadAudio = useUploadAudio()
 
   const handlePointerDown = useCallback(async () => {
     await startRecording()
@@ -25,18 +24,17 @@ export default function HomePage() {
     if (!result) return
     setProcessing()
     try {
-      const item = await api.audio.upload(result.blob, result.duration)
+      const item = await uploadAudio.mutateAsync({ blob: result.blob, duration: result.duration })
       setPendingItem(item)
     } catch (err) {
       console.error("Upload failed", err)
     } finally {
       setIdle()
     }
-  }, [stopRecording, setProcessing, setIdle])
+  }, [stopRecording, setProcessing, setIdle, uploadAudio])
 
-  function handleConfirmed(item: Item) {
+  function handleConfirmed() {
     setPendingItem(null)
-    setLastItem(item)
   }
 
   function handleDiscarded() {

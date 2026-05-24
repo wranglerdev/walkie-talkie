@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router"
 import type { Item, ItemType } from "../api/client"
-import { api } from "../api/client"
+import { usePatchItem } from "../hooks/items"
 
 const BADGE_COLOR: Record<ItemType, string> = {
   reminder: "badge-primary",
@@ -23,22 +23,21 @@ const LABEL: Record<ItemType, string> = {
 type Props = {
   item: Item
   compact?: boolean
-  onUpdate?: (updated: Item) => void
 }
 
-export default function ItemCard({ item, compact = false, onUpdate }: Props) {
+export default function ItemCard({ item, compact = false }: Props) {
+  const patchItem = usePatchItem()
+
   const dueDate = item.dueDate
     ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(new Date(item.dueDate))
     : null
 
-  async function toggleComplete() {
-    const updated = await api.items.patch(item.id, { completed: !item.completed })
-    onUpdate?.(updated)
+  function toggleComplete() {
+    patchItem.mutate({ id: item.id, data: { completed: !item.completed } })
   }
 
-  async function togglePaid() {
-    const updated = await api.items.patch(item.id, { paid: !item.paid })
-    onUpdate?.(updated)
+  function togglePaid() {
+    patchItem.mutate({ id: item.id, data: { paid: !item.paid } })
   }
 
   return (

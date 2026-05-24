@@ -1,6 +1,5 @@
-import { useState, useEffect } from "react"
 import { useParams, Link } from "@tanstack/react-router"
-import { api, type Item } from "../api/client"
+import { useItem } from "../hooks/items"
 
 function StepNode({
   index,
@@ -55,19 +54,9 @@ function CodeBlock({ value }: { value: unknown }) {
 
 export default function LogPage() {
   const { id } = useParams({ from: "/_authenticated/logs/$id" })
-  const [item, setItem] = useState<Item | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { data: item, isLoading, error } = useItem(id)
 
-  useEffect(() => {
-    api.items
-      .get(id)
-      .then(setItem)
-      .catch((e: Error) => setError(e.message))
-      .finally(() => setLoading(false))
-  }, [id])
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <span className="loading loading-spinner loading-lg text-primary" />
@@ -78,7 +67,7 @@ export default function LogPage() {
   if (error || !item) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4">
-        <p className="text-error">{error ?? "Item não encontrado"}</p>
+        <p className="text-error">{(error as Error)?.message ?? "Item não encontrado"}</p>
         <Link to="/history" className="btn btn-ghost btn-sm">← Voltar</Link>
       </div>
     )

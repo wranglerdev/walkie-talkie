@@ -1,7 +1,7 @@
 import { Hono } from "hono"
 import { eq, and } from "drizzle-orm"
 import { createDb } from "../db"
-import { items } from "../db/schema"
+import { items, contextProjects } from "../db/schema"
 import { createAuth } from "../auth"
 import { sessionMiddleware } from "../middleware/session"
 import { itemPatchSchema } from "@walkie-talkie/shared"
@@ -38,6 +38,33 @@ itemsRoute.get("/", async (c) => {
     : await db.select().from(items).where(base)
 
   return c.json(rows.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()))
+})
+
+// Returns backlog items grouped by project
+itemsRoute.get("/backlog", async (c) => {
+  const db = createDb(c.env.DB)
+  const userId = c.get("userId")
+
+  const [projects, backlogItems] = await Promise.all([
+    db.select().from(contextProjects).where(eq(contextProjects.userId, userId)),
+    db.select().from(items).where(
+      and(eq(items.status, "confirmed"), eq(items.userId, userId), eq(items.type, "backlog")),
+    ),
+  ])
+
+  const grouped = projects.map((p) => ({
+    project: p,
+    items: backlogItems
+      .filter((i) => i.projectId === p.id)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()),
+  }))
+
+  // Items without a matched project
+  const unlinked = backlogItems
+    .filter((i) => !i.projectId || !projects.find((p) => p.id === i.projectId))
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+
+  return c.json({ grouped, unlinked })
 })
 
 itemsRoute.get("/:id", async (c) => {

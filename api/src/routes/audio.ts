@@ -1,11 +1,13 @@
 import { Hono } from "hono"
 import { createId } from "@paralleldrive/cuid2"
+import { eq, and, or, isNull, gt } from "drizzle-orm"
 import { createDb } from "../db"
-import { items } from "../db/schema"
+import { items, contextPeople, contextProjects, itemPeople } from "../db/schema"
 import { createAuth } from "../auth"
 import { sessionMiddleware } from "../middleware/session"
 import { transcribeAudio } from "../services/transcription"
 import { classifyTranscript } from "../services/classifier"
+import { fuzzyIncludes, fuzzyEqual } from "../utils/fuzzy"
 
 type Bindings = {
   DB: D1Database
@@ -90,15 +92,62 @@ audioRoute.post("/upload", async (c) => {
 
   // Classify
   const now = clientNowRaw ? new Date(clientNowRaw) : new Date()
+  const db = createDb(c.env.DB)
+  const transcriptLower = transcript.toLowerCase()
+
+  // Fetch active projects + active context people in parallel
+  const [activeProjects, activePeople] = await Promise.all([
+    db
+      .select({ id: contextProjects.id, name: contextProjects.name })
+      .from(contextProjects)
+      .where(and(eq(contextProjects.userId, userId), eq(contextProjects.active, true))),
+    db
+      .select()
+      .from(contextPeople)
+      .where(
+        and(
+          eq(contextPeople.userId, userId),
+          or(isNull(contextPeople.expiresAt), gt(contextPeople.expiresAt, now)),
+        ),
+      ),
+  ])
+
+  // Detect mentioned context people BEFORE classification so they can go into metadata
+  const mentionedPeople = activePeople.filter((p) => fuzzyIncludes(p.name, transcript))
+
   const classification = await classifyTranscript(
     transcript,
     now,
     c.env.USER_TIMEZONE,
     c.env.AI,
+    activeProjects.map((p) => p.name),
   )
 
-  // Save to D1
-  const db = createDb(c.env.DB)
+  // Keyword-based backlog override — the LLM alone is unreliable for Portuguese voice input
+  if (classification.category !== "backlog" && transcriptLower.includes("backlog")) {
+    classification.category = "backlog"
+    if (!classification.projectName) {
+      // Extract project name from patterns like "backlog do/da/de [projeto] X"
+      const match = transcript.match(/backlog\s+d[aoe]s?\s+(?:projeto\s+)?(\w+(?:\s+\w+){0,2})/i)
+      if (match) classification.projectName = match[1].trim()
+    }
+  }
+
+  // Resolve backlog project ID
+  let resolvedProjectId: string | null = null
+  if (classification.category === "backlog" && classification.projectName) {
+    const lowerName = classification.projectName.toLowerCase()
+    const match =
+      activeProjects.find((p) => p.name.toLowerCase() === lowerName) ??
+      activeProjects.find(
+        (p) =>
+          p.name.toLowerCase().includes(lowerName) ||
+          lowerName.includes(p.name.toLowerCase()),
+      ) ??
+      activeProjects.find((p) => fuzzyEqual(p.name, classification.projectName!))
+    resolvedProjectId = match?.id ?? null
+  }
+
   const id = createId()
   const dueDate = classification.dueDate ? new Date(classification.dueDate) : null
 
@@ -106,6 +155,7 @@ audioRoute.post("/upload", async (c) => {
   if (classification.amount != null) metadata.amount = classification.amount
   if (classification.tags) metadata.tags = classification.tags
   if (classification.confidence != null) metadata.confidence = classification.confidence
+  if (mentionedPeople.length > 0) metadata.pessoas = mentionedPeople.map((p) => p.name)
 
   const confidence = classification.confidence ?? 0
   const autoConfirm = confidence >= 0.8
@@ -124,9 +174,21 @@ audioRoute.post("/upload", async (c) => {
     paid: classification.category === "bill" ? (classification.paid ?? false) : null,
     metadata: Object.keys(metadata).length > 0 ? metadata : null,
     status: "pending" as const,
+    projectId: resolvedProjectId,
   }
 
   await db.insert(items).values(newItem)
+
+  // Persist item_people relations
+  if (mentionedPeople.length > 0) {
+    await db.insert(itemPeople).values(
+      mentionedPeople.map((p) => ({
+        id: createId(),
+        itemId: id,
+        personId: p.id,
+      })),
+    )
+  }
 
   if (autoConfirm) {
     await c.env.ITEM_QUEUE.send({ itemId: id }, { delaySeconds: 5 })

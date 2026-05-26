@@ -3,6 +3,7 @@ import { cors } from "hono/cors"
 import { createAuth } from "./auth"
 import { itemsRoute } from "./routes/items"
 import { audioRoute } from "./routes/audio"
+import { contextRoute } from "./routes/context"
 import { getMigrations } from "better-auth/db/migration"
 import { createDb } from "./db"
 import { processAutoConfirm } from "./services/pending"
@@ -85,6 +86,9 @@ app.route("/api/items", itemsRoute)
 
 // Audio upload + R2 serve (session-protected inside the route)
 app.route("/api/audio", audioRoute)
+
+// Context (people + projects) management
+app.route("/api/context", contextRoute)
 
 app.get("/", (c) => c.text("walkie-talkie api"))
 

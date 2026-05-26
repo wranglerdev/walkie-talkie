@@ -1,23 +1,26 @@
 import { useEffect, useRef, useState } from "react"
+import { X } from "@phosphor-icons/react"
 import type { Item, ItemType } from "../api/client"
 import { useConfirmItem, useDeleteItem } from "../hooks/items"
 
-const BADGE_COLOR: Record<ItemType, string> = {
-  reminder: "badge-primary",
-  bill: "badge-warning",
-  note: "badge-info",
-  idea: "badge-secondary",
-  shopping: "badge-success",
-  journal: "badge-ghost",
-}
-
-const LABEL: Record<ItemType, string> = {
+const TYPE_LABEL: Record<ItemType, string> = {
   reminder: "lembrete",
   bill: "conta",
   note: "nota",
   idea: "ideia",
   shopping: "compra",
   journal: "diário",
+  backlog: "backlog",
+}
+
+const TYPE_BADGE: Record<ItemType, string> = {
+  reminder: "bg-blue-500/15 text-blue-400",
+  bill:     "bg-amber-500/15 text-amber-400",
+  note:     "bg-sky-400/15 text-sky-300",
+  idea:     "bg-purple-500/15 text-purple-400",
+  shopping: "bg-emerald-500/15 text-emerald-400",
+  journal:  "bg-rose-400/15 text-rose-300",
+  backlog:  "bg-indigo-500/15 text-indigo-400",
 }
 
 const COUNTDOWN_SECONDS = 5
@@ -40,20 +43,16 @@ export default function PendingReview({ item, onConfirmed, onDiscarded }: Props)
 
   useEffect(() => {
     if (!isHighConfidence) return
-
     const interval = setInterval(() => {
       setSecondsLeft((s) => {
         if (s <= 1) {
           clearInterval(interval)
-          if (!discardedRef.current) {
-            onConfirmed()
-          }
+          if (!discardedRef.current) onConfirmed()
           return 0
         }
         return s - 1
       })
     }, 1000)
-
     return () => clearInterval(interval)
   }, [isHighConfidence, onConfirmed])
 
@@ -75,54 +74,64 @@ export default function PendingReview({ item, onConfirmed, onDiscarded }: Props)
     }
   }
 
+  const badgeClass = TYPE_BADGE[item.type]
+
   return (
     <div className="w-full max-w-sm">
-      <p className="text-xs text-base-content/40 mb-2 text-center uppercase tracking-wider">
-        {isHighConfidence ? "Salvando em..." : "Confirmar transcrição"}
+      <p className="text-xs text-base-content/35 mb-2.5 text-center uppercase tracking-widest font-medium">
+        {isHighConfidence ? "Auto-salvando..." : "Confirmar gravação"}
       </p>
 
-      <div className="card bg-base-200">
-        <div className="card-body gap-3">
-          <div className="flex items-start gap-2">
-            <span className={`badge ${BADGE_COLOR[item.type]} shrink-0 mt-0.5`}>
-              {LABEL[item.type]}
-            </span>
-            <p className="text-base-content font-medium flex-1 text-left">{item.title}</p>
-          </div>
-
-          <p className="text-sm text-base-content/60 line-clamp-2">{item.transcript}</p>
-
-          {isHighConfidence ? (
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-base-content/50">{secondsLeft}s</span>
-                <div
-                  className="h-1.5 flex-1 mx-3 rounded-full bg-base-300 overflow-hidden"
-                  role="progressbar"
-                  aria-valuenow={secondsLeft}
-                  aria-valuemax={COUNTDOWN_SECONDS}
-                >
-                  <div
-                    className="h-full bg-primary transition-all duration-1000 ease-linear rounded-full"
-                    style={{ width: `${(secondsLeft / COUNTDOWN_SECONDS) * 100}%` }}
-                  />
-                </div>
-              </div>
-              <button className="btn btn-sm btn-ghost btn-error w-full" onClick={handleDiscard}>
-                Cancelar
-              </button>
-            </div>
-          ) : (
-            <div className="flex gap-2">
-              <button className="btn btn-sm btn-ghost flex-1" onClick={handleDiscard}>
-                Descartar
-              </button>
-              <button className="btn btn-sm btn-primary flex-1" onClick={handleConfirm}>
-                Confirmar
-              </button>
-            </div>
-          )}
+      <div className="rounded-2xl bg-base-200/80 backdrop-blur-md border border-base-content/10 p-4 flex flex-col gap-3">
+        <div className="flex items-start gap-2.5">
+          <span className={["inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium shrink-0 mt-0.5", badgeClass].join(" ")}>
+            {TYPE_LABEL[item.type]}
+          </span>
+          <p className="text-base-content font-semibold flex-1 text-left text-sm leading-snug">{item.title}</p>
         </div>
+
+        <p className="text-xs text-base-content/50 line-clamp-2 leading-relaxed">{item.transcript}</p>
+
+        {isHighConfidence ? (
+          <div className="flex flex-col gap-2.5">
+            <div className="flex items-center gap-3">
+              <span className="text-primary font-semibold text-sm tabular-nums">{secondsLeft}s</span>
+              <div
+                className="h-1.5 flex-1 rounded-full bg-base-300 overflow-hidden"
+                role="progressbar"
+                aria-valuenow={secondsLeft}
+                aria-valuemax={COUNTDOWN_SECONDS}
+              >
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-primary to-secondary transition-all duration-1000 ease-linear"
+                  style={{ width: `${(secondsLeft / COUNTDOWN_SECONDS) * 100}%` }}
+                />
+              </div>
+            </div>
+            <button
+              className="flex items-center justify-center gap-1.5 w-full py-2 rounded-xl text-sm text-error/70 hover:text-error hover:bg-error/10 transition-colors"
+              onClick={handleDiscard}
+            >
+              <X size={14} weight="bold" />
+              Cancelar
+            </button>
+          </div>
+        ) : (
+          <div className="flex gap-2 mt-1">
+            <button
+              className="flex-1 py-2 rounded-xl text-sm text-base-content/50 hover:text-base-content hover:bg-base-300 transition-colors"
+              onClick={handleDiscard}
+            >
+              Descartar
+            </button>
+            <button
+              className="flex-1 py-2 rounded-xl text-sm font-medium bg-primary text-primary-content hover:opacity-90 transition-opacity"
+              onClick={handleConfirm}
+            >
+              Confirmar
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

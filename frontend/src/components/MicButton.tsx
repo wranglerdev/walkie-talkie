@@ -1,44 +1,126 @@
+import { Microphone } from "@phosphor-icons/react"
 import type { RecorderState } from "../hooks/useRecorder"
 
-const MicIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-10 h-10">
-    <path d="M12 1a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4z" />
-    <path d="M19 10a1 1 0 0 0-2 0 5 5 0 0 1-10 0 1 1 0 0 0-2 0 7 7 0 0 0 6 6.92V19H9a1 1 0 0 0 0 2h6a1 1 0 0 0 0-2h-2v-2.08A7 7 0 0 0 19 10z" />
-  </svg>
-)
+type RecordMode = "idle" | "tap" | "hold"
 
 type Props = {
   recorderState: RecorderState
+  recordMode: RecordMode
+  elapsed: number
+  maxDuration: number
   onPointerDown: () => void
   onPointerUp: () => void
+  onPointerLeave: () => void
 }
 
-export default function MicButton({ recorderState, onPointerDown, onPointerUp }: Props) {
-  const isRecording = recorderState === "recording"
+const CX = 88
+const CY = 88
+const RADIUS = 76
+const CIRCUMFERENCE = 2 * Math.PI * RADIUS
+
+export default function MicButton({
+  recorderState,
+  recordMode,
+  elapsed,
+  maxDuration,
+  onPointerDown,
+  onPointerUp,
+  onPointerLeave,
+}: Props) {
   const isProcessing = recorderState === "processing"
-  const isDisabled = isProcessing
+  const isRecording = recorderState === "recording"
+  const isActive = isRecording && recordMode !== "idle"
+
+  const isNearEnd = elapsed > maxDuration - 4_000
+  const dashOffset = CIRCUMFERENCE * (1 - Math.min(elapsed / maxDuration, 1))
+
+  const ringClass = isActive
+    ? "mic-ring-recording"
+    : "mic-ring-idle"
+
+  const buttonBg = isActive
+    ? "bg-base-300"
+    : "bg-base-200"
+
+  const iconColor = isActive
+    ? "text-secondary"
+    : isProcessing
+    ? "text-primary/60"
+    : "text-base-content/70"
+
+  const arcColor = isNearEnd
+    ? "stroke-error"
+    : isActive && recordMode === "tap"
+    ? "stroke-secondary"
+    : "stroke-warning"
 
   return (
-    <div className="relative flex items-center justify-center">
+    <div className="relative flex items-center justify-center" style={{ width: 200, height: 200 }}>
+      {/* Outer ring */}
+      <div
+        className={[
+          "absolute rounded-full pointer-events-none",
+          ringClass,
+        ].join(" ")}
+        style={{ width: 176, height: 176 }}
+        aria-hidden="true"
+      />
+
+      {/* SVG progress arc */}
       {isRecording && (
-        <span className="absolute inline-flex h-full w-full rounded-full bg-error opacity-40 animate-ping" />
+        <svg
+          width={176}
+          height={176}
+          viewBox="0 0 176 176"
+          className="absolute pointer-events-none"
+          aria-hidden="true"
+        >
+          <circle
+            cx={CX} cy={CY} r={RADIUS}
+            fill="none" strokeWidth={3}
+            className="stroke-base-300/40"
+          />
+          <circle
+            cx={CX} cy={CY} r={RADIUS}
+            fill="none" strokeWidth={3} strokeLinecap="round"
+            className={arcColor}
+            style={{
+              strokeDasharray: CIRCUMFERENCE,
+              strokeDashoffset: dashOffset,
+              transform: "rotate(-90deg)",
+              transformOrigin: `${CX}px ${CY}px`,
+              transition: "stroke-dashoffset 0.1s linear",
+            }}
+          />
+        </svg>
       )}
+
+      {/* Core button */}
       <button
         className={[
-          "btn btn-circle w-24 h-24 text-primary-content shadow-lg",
-          isRecording ? "btn-error ring-4 ring-error ring-offset-2 ring-offset-base-100" : "btn-primary",
-          isDisabled ? "cursor-not-allowed opacity-75" : "",
+          "relative flex items-center justify-center rounded-full select-none",
+          "transition-colors duration-200",
+          buttonBg,
+          isProcessing ? "cursor-not-allowed opacity-75" : "cursor-pointer active:scale-95",
         ].join(" ")}
-        onPointerDown={isDisabled ? undefined : onPointerDown}
-        onPointerUp={isDisabled ? undefined : onPointerUp}
-        onPointerLeave={isDisabled ? undefined : onPointerUp}
-        disabled={isDisabled}
-        aria-label={isRecording ? "Gravando — solte para parar" : "Segure para gravar"}
+        style={{ width: 144, height: 144 }}
+        onPointerDown={isProcessing ? undefined : onPointerDown}
+        onPointerUp={isProcessing ? undefined : onPointerUp}
+        onPointerLeave={isProcessing ? undefined : onPointerLeave}
+        disabled={isProcessing}
+        aria-label={
+          isProcessing ? "Processando..." :
+          recordMode === "tap" ? "Gravando — toque para parar" :
+          recordMode === "hold" ? "Gravando — solte para parar" :
+          "Segure ou toque para gravar"
+        }
       >
         {isProcessing ? (
-          <span className="loading loading-ring loading-lg" />
+          <span className="loading loading-ring loading-lg text-primary" />
         ) : (
-          <MicIcon />
+          <span className={["inline-flex transition-colors duration-200", iconColor].join(" ")}>
+            <Microphone size={44} weight="fill" />
+          </span>
         )}
       </button>
     </div>

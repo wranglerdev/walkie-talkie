@@ -1,14 +1,88 @@
 @import "tailwindcss";
-@plugin "daisyui" {
-  themes: black --default;
+@import "@fontsource/space-grotesk/400.css";
+@import "@fontsource/space-grotesk/500.css";
+@import "@fontsource/space-grotesk/600.css";
+@import "@fontsource/space-grotesk/700.css";
+
+@plugin "daisyui";
+@plugin "daisyui/theme" {
+  name: "volt";
+  default: true;
+  prefersdark: true;
+  color-scheme: dark;
+
+  --color-base-100: oklch(7% 0.02 265);
+  --color-base-200: oklch(11% 0.025 265);
+  --color-base-300: oklch(16% 0.028 265);
+  --color-base-content: oklch(92% 0.01 260);
+
+  --color-primary: oklch(60% 0.22 265);
+  --color-primary-content: oklch(97% 0.005 265);
+
+  --color-secondary: oklch(65% 0.20 145);
+  --color-secondary-content: oklch(15% 0.01 145);
+
+  --color-accent: oklch(68% 0.18 145);
+  --color-accent-content: oklch(15% 0.01 145);
+
+  --color-neutral: oklch(20% 0.02 265);
+  --color-neutral-content: oklch(75% 0.01 265);
+
+  --color-info: oklch(65% 0.15 200);
+  --color-info-content: oklch(97% 0.005 200);
+
+  --color-success: oklch(65% 0.20 145);
+  --color-success-content: oklch(97% 0.005 145);
+
+  --color-warning: oklch(75% 0.20 70);
+  --color-warning-content: oklch(20% 0.05 70);
+
+  --color-error: oklch(62% 0.22 25);
+  --color-error-content: oklch(97% 0.005 25);
+
+  --radius-selector: 2rem;
+  --radius-field: 0.75rem;
+  --radius-box: 1rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
 }
 
 body {
   margin: 0;
+  font-family: "Space Grotesk", sans-serif;
 }
 
 #root {
   min-height: 100svh;
   display: flex;
   flex-direction: column;
+}
+
+@keyframes ring-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 oklch(65% 0.20 145 / 0.5), 0 0 20px 4px oklch(65% 0.20 145 / 0.3);
+  }
+  50% {
+    box-shadow: 0 0 0 8px oklch(65% 0.20 145 / 0), 0 0 30px 8px oklch(65% 0.20 145 / 0.4);
+  }
+}
+
+@keyframes glow-idle {
+  0%, 100% {
+    box-shadow: 0 0 12px 2px oklch(60% 0.22 265 / 0.2);
+  }
+  50% {
+    box-shadow: 0 0 20px 4px oklch(60% 0.22 265 / 0.35);
+  }
+}
+
+.mic-ring-idle {
+  border: 1.5px solid oklch(60% 0.22 265 / 0.45);
+  animation: glow-idle 3s ease-in-out infinite;
+}
+
+.mic-ring-recording {
+  border: 2px solid oklch(65% 0.20 145 / 0.9);
+  animation: ring-pulse 1.5s ease-in-out infinite;
 }

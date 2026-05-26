@@ -1,28 +1,44 @@
-import { Link } from "@tanstack/react-router"
+import { Link, useRouterState } from "@tanstack/react-router"
+import { House, ClockCounterClockwise, Users, Stack } from "@phosphor-icons/react"
+import type { Icon } from "@phosphor-icons/react"
 
-const HomeIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" className="w-5 h-5">
-    <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
-  </svg>
-)
-
-const HistoryIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" className="w-5 h-5">
-    <path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z" />
-  </svg>
-)
+const NAV_ITEMS: { to: string; label: string; icon: Icon; exact: boolean }[] = [
+  { to: "/", label: "Início", icon: House, exact: true },
+  { to: "/history", label: "Histórico", icon: ClockCounterClockwise, exact: false },
+  { to: "/context", label: "Contexto", icon: Users, exact: false },
+  { to: "/backlog", label: "Backlog", icon: Stack, exact: false },
+]
 
 export default function BottomNav() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname })
+
   return (
-    <div className="dock dock-sm">
-      <Link to="/" activeProps={{ className: "dock-active" }} activeOptions={{ exact: true }}>
-        <HomeIcon />
-        <span className="dock-label">Home</span>
-      </Link>
-      <Link to="/history" activeProps={{ className: "dock-active" }}>
-        <HistoryIcon />
-        <span className="dock-label">Histórico</span>
-      </Link>
-    </div>
+    <nav className="fixed bottom-0 inset-x-0 h-16 flex justify-around items-center px-2 backdrop-blur-xl bg-base-100/80 border-t border-base-content/5 z-50">
+      {NAV_ITEMS.map(({ to, label, icon: Icon, exact }) => {
+        const isActive = exact ? pathname === to : pathname.startsWith(to)
+        return (
+          <Link
+            key={to}
+            to={to}
+            className="relative flex flex-col items-center gap-0.5 px-4 py-1"
+          >
+            <span className={["transition-colors duration-150", isActive ? "text-primary" : "text-base-content/35"].join(" ")}>
+              <Icon size={22} weight="fill" />
+            </span>
+            <span
+              className={[
+                "text-[10px] font-medium tracking-wide transition-colors duration-150",
+                isActive ? "text-primary" : "text-base-content/30",
+              ].join(" ")}
+            >
+              {label}
+            </span>
+            {isActive && (
+              <span className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full bg-primary" />
+            )}
+          </Link>
+        )
+      })}
+    </nav>
   )
 }

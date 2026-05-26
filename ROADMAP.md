@@ -8,11 +8,13 @@
 ## Como usar este roadmap
 
 Cada fase termina com um **commit semântico**. Para retomar:
+
 1. `git log --oneline` → identifica último commit
 2. Localiza a fase correspondente abaixo
 3. Inicia a próxima fase marcada com `[ ]`
 
 Convenção de commits:
+
 - `chore:` — setup, config, dependências
 - `feat:` — nova funcionalidade
 - `fix:` — correção
@@ -111,10 +113,12 @@ Dependências: `tailwindcss`, `daisyui`
 
 - [x] Instalar `tailwindcss` e `daisyui` em `frontend/`
 - [x] Atualizar `frontend/src/index.css`:
+
   ```css
   @import "tailwindcss";
   @plugin "daisyui";
   ```
+
 - [x] Configurar tema `night` no plugin daisyUI
 - [x] Atualizar `frontend/vite.config.ts` — adicionar `@tailwindcss/vite` plugin
 - [x] Remover `App.css` e boilerplate do Vite
@@ -267,3 +271,5 @@ Dependências: `vite-plugin-pwa`
 - **STT**: OpenRouter + `x-ai/grok-2-vision-1212` ou equivalente com suporte a áudio.
 - **Frontend proxy**: Vite proxia `/api` para `localhost:8787` em dev.
 - **daisyUI v5**: importado via CSS (`@plugin "daisyui"`), não como plugin Vite.
+
+logica fuzzy nos contatos e nos projetos

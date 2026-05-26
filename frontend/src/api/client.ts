@@ -1,4 +1,4 @@
-export type ItemType = "reminder" | "note" | "bill" | "idea" | "shopping" | "journal"
+export type ItemType = "reminder" | "note" | "bill" | "idea" | "shopping" | "journal" | "backlog"
 
 export type Item = {
   id: string
@@ -13,6 +13,28 @@ export type Item = {
   paid: boolean | null
   metadata: Record<string, unknown> | null
   status: "pending" | "confirmed"
+  projectId: string | null
+}
+
+export type ContextPerson = {
+  id: string
+  userId: string
+  name: string
+  expiresAt: string | null
+  createdAt: string
+}
+
+export type ContextProject = {
+  id: string
+  userId: string
+  name: string
+  active: boolean
+  createdAt: string
+}
+
+export type BacklogResponse = {
+  grouped: { project: ContextProject; items: Item[] }[]
+  unlinked: Item[]
 }
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
@@ -46,6 +68,8 @@ export const api = {
 
     confirm: (id: string) =>
       apiFetch<Item>(`/items/${id}/confirm`, { method: "POST" }),
+
+    backlog: () => apiFetch<BacklogResponse>("/items/backlog"),
   },
 
   audio: {
@@ -65,5 +89,30 @@ export const api = {
       }
       return res.json() as Promise<Item>
     },
+  },
+
+  context: {
+    listPeople: () => apiFetch<ContextPerson[]>("/context/people"),
+    createPerson: (data: { name: string; expiresAt: string | null }) =>
+      apiFetch<ContextPerson>("/context/people", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    deletePerson: (id: string) =>
+      apiFetch<{ success: boolean }>(`/context/people/${id}`, { method: "DELETE" }),
+
+    listProjects: () => apiFetch<ContextProject[]>("/context/projects"),
+    createProject: (data: { name: string }) =>
+      apiFetch<ContextProject>("/context/projects", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    toggleProject: (id: string, active: boolean) =>
+      apiFetch<ContextProject>(`/context/projects/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ active }),
+      }),
+    deleteProject: (id: string) =>
+      apiFetch<{ success: boolean }>(`/context/projects/${id}`, { method: "DELETE" }),
   },
 }

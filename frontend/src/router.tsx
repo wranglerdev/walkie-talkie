@@ -9,6 +9,8 @@ import LoginPage from "./pages/LoginPage"
 import HomePage from "./pages/HomePage"
 import HistoryPage from "./pages/HistoryPage"
 import LogPage from "./pages/LogPage"
+import ContextPage from "./pages/ContextPage"
+import BacklogPage from "./pages/BacklogPage"
 import BottomNav from "./components/BottomNav"
 
 type AuthSession = { user: unknown; session: unknown } | null | undefined
@@ -66,9 +68,21 @@ const logRoute = createRoute({
   component: LogPage,
 })
 
+const contextRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: "/context",
+  component: ContextPage,
+})
+
+const backlogRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: "/backlog",
+  component: BacklogPage,
+})
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
-  authenticatedRoute.addChildren([homeRoute, historyRoute, logRoute]),
+  authenticatedRoute.addChildren([homeRoute, historyRoute, logRoute, contextRoute, backlogRoute]),
 ])
 
 export const router = createRouter({

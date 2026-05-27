@@ -43,7 +43,7 @@ export async function classifyTranscript(
 ): Promise<ClassificationResult> {
   const userPrompt = `Data/hora atual: ${now.toISOString()} (timezone: ${timezone})\n\nTranscript: "${transcript}"`
 
-  const response = await ai.run("@cf/moonshotai/kimi-k2.5", {
+  const response = await ai.run("@cf/cerebras/llama-4-scout-17b-16e-instruct", {
     messages: [
       { role: "system", content: buildSystemPrompt(activeProjects) },
       { role: "user", content: userPrompt },

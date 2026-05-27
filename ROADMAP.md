@@ -271,5 +271,3 @@ Dependências: `vite-plugin-pwa`
 - **STT**: OpenRouter + `x-ai/grok-2-vision-1212` ou equivalente com suporte a áudio.
 - **Frontend proxy**: Vite proxia `/api` para `localhost:8787` em dev.
 - **daisyUI v5**: importado via CSS (`@plugin "daisyui"`), não como plugin Vite.
-
-logica fuzzy nos contatos e nos projetos

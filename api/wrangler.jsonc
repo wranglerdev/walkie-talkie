@@ -1,9 +1,14 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "api",
+  "name": "walkie-talkie-api",
   "main": "src/index.ts",
   "compatibility_date": "2026-05-23",
   "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "../frontend/dist",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
   "vars": {
     "USER_TIMEZONE": "America/Sao_Paulo"
   },

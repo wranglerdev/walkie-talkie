@@ -1,5 +1,4 @@
 import { Hono } from "hono"
-import { cors } from "hono/cors"
 import { createAuth } from "./auth"
 import { itemsRoute } from "./routes/items"
 import { audioRoute } from "./routes/audio"
@@ -23,15 +22,6 @@ type Variables = {
 }
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
-
-app.use("*", async (c, next) => {
-  return cors({
-    origin: c.env.BETTER_AUTH_URL,
-    allowHeaders: ["Content-Type", "Authorization"],
-    allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-    credentials: true,
-  })(c, next)
-})
 
 // Block public registration
 app.post("/api/auth/sign-up/*", (c) => {
@@ -89,8 +79,6 @@ app.route("/api/audio", audioRoute)
 
 // Context (people + projects) management
 app.route("/api/context", contextRoute)
-
-app.get("/", (c) => c.text("walkie-talkie api"))
 
 export default {
   fetch: app.fetch,

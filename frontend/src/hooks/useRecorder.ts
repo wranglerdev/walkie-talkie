@@ -8,8 +8,10 @@ export function useRecorder() {
   const [state, setState] = useState<RecorderState>("idle")
   const [error, setError] = useState<string | null>(null)
   const [elapsed, setElapsed] = useState(0)
+  const [analyser, setAnalyser] = useState<AnalyserNode | null>(null)
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioContextRef = useRef<AudioContext | null>(null)
   const chunksRef = useRef<Blob[]>([])
   const startTimeRef = useRef<number>(0)
   const tickerRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -31,6 +33,16 @@ export function useRecorder() {
     setElapsed(0)
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+
+      const audioContext = new AudioContext()
+      const source = audioContext.createMediaStreamSource(stream)
+      const analyserNode = audioContext.createAnalyser()
+      analyserNode.fftSize = 64
+      analyserNode.smoothingTimeConstant = 0.8
+      source.connect(analyserNode)
+      audioContextRef.current = audioContext
+      setAnalyser(analyserNode)
+
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
           ? "audio/webm;codecs=opus"
@@ -64,6 +76,10 @@ export function useRecorder() {
 
   const stopRecording = useCallback((): Promise<{ blob: Blob; duration: number } | null> => {
     clearTicker()
+    setAnalyser(null)
+    audioContextRef.current?.close()
+    audioContextRef.current = null
+
     return new Promise((resolve) => {
       const recorder = mediaRecorderRef.current
       if (!recorder || recorder.state === "inactive") {
@@ -92,8 +108,15 @@ export function useRecorder() {
   }, [])
 
   useEffect(() => {
-    return () => clearTicker()
+    return () => {
+      clearTicker()
+      audioContextRef.current?.close()
+    }
   }, [clearTicker])
 
-  return { state, error, elapsed, startRecording, stopRecording, setProcessing, setIdle, setAutoStopCallback }
+  return {
+    state, error, elapsed, analyser,
+    startRecording, stopRecording,
+    setProcessing, setIdle, setAutoStopCallback,
+  }
 }

@@ -1,49 +1,35 @@
 import { useState, useCallback, useRef, useEffect } from "react"
+import { Microphone, PaperPlaneTilt, X } from "@phosphor-icons/react"
 import { useRecorder } from "../hooks/useRecorder"
 import { useItems, useUploadAudio } from "../hooks/items"
 import type { Item } from "../api/client"
-import MicButton from "../components/MicButton"
+import AudioWaveform from "../components/AudioWaveform"
 import ItemCard from "../components/ItemCard"
 import PendingReview from "../components/PendingReview"
 
-const TAP_THRESHOLD = 400
-const MIN_DURATION  = 1_500
-const MAX_DURATION  = 20_000
+const MIN_SEND_MS = 1_500
+const MAX_DURATION = 20_000
 
-function statusText(
-  state: string,
-  recordMode: string,
-  tooShort: boolean,
-  error: string | null,
-): string {
-  if (state === "error")      return error ?? "Erro ao gravar"
-  if (state === "processing") return "Processando..."
-  if (state === "recording") {
-    if (recordMode === "tap")  return tooShort ? "Continue gravando..." : "IA ouvindo..."
-    if (recordMode === "hold") return tooShort ? "Continue segurando..." : "Gravando..."
-  }
-  return "Segure ou toque para gravar"
+function formatElapsed(ms: number): string {
+  const s = Math.floor(ms / 1000)
+  const m = Math.floor(s / 60)
+  return `${m}:${String(s % 60).padStart(2, "0")}`
 }
 
 export default function HomePage() {
   const {
-    state, error, elapsed,
+    state, error, elapsed, analyser,
     startRecording, stopRecording,
     setProcessing, setIdle,
     setAutoStopCallback,
   } = useRecorder()
 
   const [pendingItem, setPendingItem] = useState<Item | null>(null)
-  const [recordMode, setRecordMode] = useState<"idle" | "tap">("idle")
-  const [tooShort, setTooShort] = useState(false)
-  const pressStartRef = useRef<number>(0)
-
   const { data: items } = useItems()
   const lastItem = pendingItem ? null : (items?.[0] ?? null)
   const uploadAudio = useUploadAudio()
 
   const submitRecording = useCallback(async () => {
-    setRecordMode("idle")
     const result = await stopRecording()
     if (!result) return
     setProcessing()
@@ -64,81 +50,111 @@ export default function HomePage() {
     setAutoStopCallback(() => submitRef.current())
   }, [setAutoStopCallback])
 
-  const showTooShort = useCallback(() => {
-    setTooShort(true)
-    setTimeout(() => setTooShort(false), 1500)
-  }, [])
+  const cancelRecording = useCallback(async () => {
+    await stopRecording()
+    setIdle()
+  }, [stopRecording, setIdle])
 
-  const handlePointerDown = useCallback(async () => {
-    if (state === "processing") return
-    if (recordMode === "tap") {
-      if (elapsed < MIN_DURATION) { showTooShort(); return }
-      await submitRecording()
-      return
-    }
-    pressStartRef.current = Date.now()
-    await startRecording()
-  }, [state, recordMode, elapsed, startRecording, submitRecording, showTooShort])
-
-  const handlePointerUp = useCallback(async () => {
-    if (state !== "recording" || recordMode === "tap") return
-    const held = Date.now() - pressStartRef.current
-    if (held < TAP_THRESHOLD) { setRecordMode("tap"); return }
-    if (elapsed < MIN_DURATION) { setRecordMode("tap"); showTooShort(); return }
-    await submitRecording()
-  }, [state, recordMode, elapsed, submitRecording, showTooShort])
-
-  function handleConfirmed() { setPendingItem(null) }
-  function handleDiscarded() { setPendingItem(null) }
-
-  const visualMode =
-    state === "recording" && recordMode === "tap" ? "tap" :
-    state === "recording" ? "hold" :
-    "idle"
-
-  const status = statusText(state, visualMode, tooShort, error)
-  const isRecordingActive = state === "recording"
+  const canSend = elapsed >= MIN_SEND_MS
+  const isRecording = state === "recording"
+  const isProcessing = state === "processing"
 
   return (
     <div className="flex-1 flex flex-col items-center justify-between px-4 pt-12 pb-20">
+
       {/* Wordmark */}
       <p className="text-base-content/25 text-xs tracking-widest uppercase font-medium">
         walkie-talkie
       </p>
 
-      {/* Hero: mic + status */}
-      <div className="flex flex-col items-center gap-7">
-        <MicButton
-          recorderState={state}
-          recordMode={visualMode}
-          elapsed={elapsed}
-          maxDuration={MAX_DURATION}
-          onPointerDown={handlePointerDown}
-          onPointerUp={handlePointerUp}
-          onPointerLeave={handlePointerUp}
-        />
+      {/* Main content — changes per state */}
+      <div className="flex flex-col items-center gap-6 w-full max-w-sm">
 
-        <p
-          className={[
-            "text-sm font-medium transition-all duration-300 text-center",
-            isRecordingActive ? "text-base-content/80" : "text-base-content/40",
-          ].join(" ")}
-        >
-          {status}
-        </p>
+        {/* ── RECORDING ── */}
+        {isRecording && analyser && (
+          <>
+            {/* Waveform card */}
+            <div className="w-full rounded-2xl bg-base-200 px-4 pt-4 pb-3 flex flex-col gap-2">
+              <AudioWaveform analyser={analyser} />
+              <div className="flex items-center justify-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-error animate-pulse" />
+                <span className="text-xs font-mono text-base-content/50 tabular-nums">
+                  {formatElapsed(elapsed)}
+                </span>
+                <span className="text-xs text-base-content/30">
+                  / {formatElapsed(MAX_DURATION)}
+                </span>
+              </div>
+            </div>
+
+            {/* Send button — disabled until MIN_SEND_MS */}
+            <button
+              onClick={submitRecording}
+              disabled={!canSend}
+              className="btn btn-primary w-full gap-3 text-base"
+            >
+              <span className="inline-flex">
+                <PaperPlaneTilt size={20} weight="fill" />
+              </span>
+              Enviar
+            </button>
+
+            {/* Cancel */}
+            <button
+              onClick={cancelRecording}
+              className="btn btn-ghost btn-sm text-base-content/40 gap-2"
+            >
+              <span className="inline-flex">
+                <X size={14} weight="bold" />
+              </span>
+              Cancelar
+            </button>
+          </>
+        )}
+
+        {/* ── PROCESSING ── */}
+        {isProcessing && (
+          <div className="flex flex-col items-center gap-4">
+            <span className="loading loading-ring loading-lg text-primary" />
+            <p className="text-sm text-base-content/40 font-medium">Processando...</p>
+          </div>
+        )}
+
+        {/* ── IDLE / ERROR ── */}
+        {!isRecording && !isProcessing && (
+          <>
+            {state === "error" && (
+              <p className="text-sm text-error text-center">{error ?? "Erro ao gravar"}</p>
+            )}
+
+            <button
+              onClick={startRecording}
+              className="btn btn-primary btn-lg gap-3 px-10 rounded-2xl"
+            >
+              <span className="inline-flex">
+                <Microphone size={24} weight="fill" />
+              </span>
+              Gravar
+            </button>
+
+            <p className="text-xs text-base-content/30">
+              Toque para gravar um lembrete, nota, conta ou ideia
+            </p>
+          </>
+        )}
       </div>
 
-      {/* Bottom slot */}
+      {/* Bottom slot — pending review or last item */}
       <div className="w-full max-w-sm">
         {pendingItem && (
           <PendingReview
             item={pendingItem}
-            onConfirmed={handleConfirmed}
-            onDiscarded={handleDiscarded}
+            onConfirmed={() => setPendingItem(null)}
+            onDiscarded={() => setPendingItem(null)}
           />
         )}
 
-        {!pendingItem && lastItem && (
+        {!pendingItem && lastItem && !isRecording && !isProcessing && (
           <div>
             <p className="text-[10px] text-base-content/25 mb-2 text-center uppercase tracking-widest font-medium">
               Último registro
@@ -146,13 +162,8 @@ export default function HomePage() {
             <ItemCard item={lastItem} compact />
           </div>
         )}
-
-        {!pendingItem && !lastItem && state === "idle" && (
-          <p className="text-base-content/20 text-xs text-center">
-            Grave um lembrete, nota, conta ou ideia
-          </p>
-        )}
       </div>
+
     </div>
   )
 }
